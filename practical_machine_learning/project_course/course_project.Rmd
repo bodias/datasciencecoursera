@@ -1,0 +1,114 @@
+---
+title: "Qualitative Activity Recognition of Exercises - Coursera Project"
+author: "Braian Dias"
+date: "January 20, 2016"
+output: html_document
+---
+## Executive Summary
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement, a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. The goal of this project is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants and try to classify how well they did the exercise. More information is available from the website here: <http://groupware.les.inf.puc-rio.br/har> (see the section on the Weight Lifting Exercise Dataset).
+
+## Overview
+
+The Data extracted from the 4 sensors (glove, armband, lumbar belt, dumbbell) was stored in a CSV format with the respective classification of the movement (from A to E, where A is the correct movement).
+The sensor data for each sensor is comprised of Euler Angles (roll, pitch and yaw) with eight features for each angle. Also, there is data from Accelerometer, Gyroscope and Magnetometer.
+It contains 19622 observations of 160 variables, which will be used later as a training dataset for the machine learning algorithm.
+Due to the high dimensional data, only the overview of the transformed data set will be presented in the following sections.
+The dataset used in this project is available at github <http://github.com>
+
+## Exploratory Analysis and Data Cleansing
+
+After loading the full training data set, a few basic R comands were ran to detect missing and invalid data that could lead to future problems when running the machine learning algorithm.
+
+```{r basicexploration}
+training <- read.csv("pml-training.csv")
+testing <- read.csv("pml-testing.csv")
+
+str(training[,1:15]) #show only the first 15 variables
+```
+The **str** function shows that there are some NAs in the variables, as well as factor and date variables which don't add value to the future model.
+Then, in order to avoid using variables with lots of NAs, the following code was run to count the number of NAs, given the 19622 observations. With the count of NAs per variable, I get rid of the variables with more or equal than 80% of NAs.
+
+```{r datacleansing}
+#get the number of NAs per column
+naspercolumn <- colSums(is.na(training))
+#get the colum names of the variables with less than 80% of NAs
+notnascol <- names(naspercolumn[naspercolumn < ((80*nrow(training))/100)])
+
+newtraining <- training[,notnascol]
+```
+
+The approach used to remove unecessary factor variables and finally get a dataset with only the variables which will be used as predictors, was to identify the factor variables and remove them. Also, the first 5 variables left after this transformation were observation number (x), user_name and time related variables, and all of them were removed in the final data set.
+
+```{r finaldataset}
+colClass <- lapply(newtraining, class)
+predictors <- names(colClass[colClass != "factor"])
+newtraining <- newtraining[,c(predictors,"classe")] # add the factor variable "classe" 
+newtraining <- newtraining[,5:57]
+```
+
+The final data set is comprise of 52 variables plus the "classe", the indicator of how the exercise was perfomed.
+
+## Building the Model
+ 
+### Data Partitioning
+Before starting training and evaluating the models, the train data set was splitted in two parts, 80% for training and 20% testing.
+
+```{r datapartitioning, results='hide'}
+library(caret)
+set.seed(665)
+inTrain <- createDataPartition(newtraining$classe,p=0.8,list=F)
+subTrain <- newtraining[inTrain,]
+subTest <- newtraining[-inTrain,]
+```
+### Standardizing and PCA
+The first approach which will be evaluated is standardize the variables in the data set, and then aply Principal Component Analysis with a threshold of 90% (the PCA needed to capture 90 of the variance). This approach is an alternative to reduce the number of predictors to improve training speed.
+
+```{r stdpca}
+preObj <- preProcess(subTrain[,-53],method=c("center","scale"))
+trainStd <- predict(preObj,subTrain[,-53])
+preProc <- preProcess(trainStd,method="pca",thresh = 0.9)
+print(preProc)
+trainStdPCA <- predict(preProc,trainStd)
+trainStdPCA$classe <- subTrain$classe
+```
+
+### Training and Cross Validation
+The selected method, Random Forests, was applied to the training set using the standardized dataset with the 20 PCA variables. The train control was also set to use Cross Validation with 5 folds.
+
+```{r traincv}
+timestart <- Sys.time()
+modelStdPCA <- train(classe ~ ., data=trainStdPCA,method="rf",trControl=trainControl(method="cv",number=5),prox=F)
+run_time <- Sys.time() - timestart
+print(modelStdPCA$finalModel)
+```
+
+The training using Random Forests with Cross Validation took `r round(run_time,2)` to run.
+
+### Predicting on training set
+
+The training model was used to predict the "classe" of the sub test set. In order to do that, the variables were standardized and PCA was applied to the test set, both using the model built from the training data.
+
+```{r predtrain}
+subtestStd <- predict(preObj,subTest) #standardize the test set using the modem built from the training set
+subtestStdPCA <- predict(preProc,subtestStd) #apply PCA to the test set using the modem built from the training set
+InSamplePred <- predict(modelStdPCA,subtestStdPCA)
+confusionMatrix(subTest$classe,InSamplePred)
+```
+
+The confusion matrix has shown satisfatory results, with an Accuracy of 0.9778 and the 95% Confidence Interval of [0.9727, 0.9822].
+
+### Predicting the results on the Test Set
+
+Then the trained model was applied to the test data set to predict the "classe" of each observation. To do so, I have to Standardize and run PCA used the models built from the training data. The predictions are shown below:
+
+```{r testresults}
+newtesting <- testing[,names(newtraining)[-53]] # get only the clean variables
+testStd <- predict(preObj,newtesting) #standardize the test set using the model built from the training set
+testStdPCA <- predict(preProc,testStd) #run PCA in the test set using the modem built from the training set
+predictions <- predict(modelStdPCA,testStdPCA)
+print(predictions)
+```
+
+## References
+[1] Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human ’13) . Stuttgart, Germany: ACM SIGCHI, 2013.
