@@ -1,0 +1,7 @@
+name: titanic_shiny_app
+account: bodias
+server: shinyapps.io
+appId: 87684
+bundleId: 389761
+url: https://bodias.shinyapps.io/titanic_shiny_app/
+when: 1457384794.28027
