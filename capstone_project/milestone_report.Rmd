@@ -11,36 +11,59 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction
 
-The main purpose of this report is to present an approach to the problem of predicting the next word given n-first words in a text. This could be used, for instance, to predict the next word in a smart keyboard that we naturally use in our everyday.
+The main purpose of this report is to present an approach to the problem of predicting the next word given n-first words in a text. This could be used, for instance, to predict the next word in a smart keyboard that we naturally use in our everyday lives.
 
 To do so, a large corpus of text documents have been used, containing text from newspappers, blogs and Twitter in four different languages: English, German, Russian and Finnish.
 
-The model chosen to accomplish the task was the "n-gram" URL model, which according to Wikipedia, is a type of probabilistic languague model for predicting the next item in such a sequence in the form of a (n-1)-order Markov Model.
+The model chosen to accomplish the task was the "n-gram" **URL** model, which according to Wikipedia, is a type of probabilistic languague model for predicting the next item in such a sequence in the form of a (n-1)-order Markov Model.
 
 In the next sections of the document it will be presented the basic structure of the raw data, how it could be transformed to be suitable for use in a predictive text model and the future plans to address the text prediction problem.
 
 # Loading data
 
-The full dataset is a compressed file of approximatedly 574MB, containing raw text from newspappers, blogs and Twitter in four different languages: English, German, Russian and Finnish. The English file with newspapper text, for instance, is 205mb big uncompressed. Therefore, to be able to run this report in a small fraction of time, a sample of the data will be used.
-The function to sample the text takes as input the file name, the number of lines that would be read, and the probability of reading a line (where 1 means all lines would be read, 0.5 means only 50% of the the lines will be read, and so on). 
+The full dataset is a compressed file of approximatedly 574MB, containing raw text from newspappers, blogs and Twitter in four different languages: English, German, Russian and Finnish. The English file with newspapper texts, for instance, is 205mb uncompressed. Therefore, to be able to run this report in a small fraction of time, a sample of the data will be used.
+The function to sample the text takes as input the file name, the number of lines that would be read, and the probability of reading a line (where 1 means all lines would be read, 0.5 means only 50% of the the lines will be read, and so on). The function itself will not be shown here for the sake of simplicity, but it can be seen in the file "functions.R", function "sample_text_file".
+For demonstration purposes, only the English texts will be used as source to the sampling function, reading all the lines with the probability of reading a line of 33%, which means approximadetaly one third of the file will be in the resulting sample file.
 
 TODO - profanity filter.
 
-```{r sampling_functions}
+```{r loading_data}
+#load basic libraries for text handling
 library(tm)
 library(tokenizers)
 
+#read sample files previously generated
 en_US.blogs.sample <- readLines("sample/en_US/en_US.blogs.txt")
 en_US.news.sample <- readLines("sample/en_US/en_US.news.txt")
 en_US.twitter.sample <- readLines("sample/en_US/en_US.twitter.txt")
+
+all_texts <- c(en_US.blogs.sample,en_US.news.sample,en_US.twitter.sample)
+
+#doc <- Corpus(VectorSource(all_texts))
 ```
 
-For demonstration purposes, only the English texts will be used as source to the sampling function, reading all the lines with the probability of reading a line of 33%, which means approximadetaly one third of the file will be in the resulting sample file.
+After reading the data, some transformations and cleaning processes were applied :
+* map "/","@" and "|" to white space
+* make all words lowercase
+* remove numbers
+* remove extra white spaces
+
+```{r cleaning}
+all_texts <- gsub("/", " ", all_texts)
+all_texts <- gsub("@", " ", all_texts)
+all_texts <- gsub("\\|", " ", all_texts)
+all_texts <- tolower(all_texts)
+all_texts <- gsub("(\\s+[0-9]+\\s+)", " ", all_texts)
+all_texts <- gsub("\\s+", " ", all_texts)
+```
+
+The next step would be tokenize the raw text in words, to extract features from data, such as frequency and n-grams.
 
 ```{r sampling}
-tokens.blogs <- unlist(tokenize_words(en_US.blogs.sample))
-tokens.blogs.df <- data.frame(table(tokens.blogs))
-head(tokens.blogs.df[order(-tokens.blogs.df$Freq),])
+tokens <- unlist(tokenize_words(all_texts))
+tokens.df <- data.frame(table(tokens))
+names(tokens.df) <- c('word','frequency')
+tokens.sorted <- tokens.df[order(-tokens.df$frequency),]
 ```
 
 # Exploratory Data Analysis
@@ -49,7 +72,22 @@ After loading the raw data, some preprocessing is needed in order to store the t
 Text will then be stored in a way to fit a 3-gram model, so it will be a three words pair.
 
 ```{r data_transformation}
-# TODO
+summary(tokens.sorted)
+
+head(tokens.sorted,10)
+
+barplot(tokens.sorted[1:10,]$frequency, las = 2, names.arg = tokens.sorted[1:10,]$word,
+        col ="lightblue", main ="Most frequent words",
+        ylab = "Word frequencies")
+```
+
+```{r wordcloud}
+library(wordcloud)
+
+set.seed(1234)
+wordcloud(words = tokens.sorted$word, freq = tokens.sorted$frequency, min.freq = 1000,
+           max.words=200, random.order=FALSE, rot.per=0.35, 
+           colors=brewer.pal(8, "Dark2"))
 ```
 
 ## Summary statistics
