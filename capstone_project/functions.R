@@ -36,7 +36,7 @@ sample_text_file <- function(file_name,n_lines=NA,p = 1){
 library(tm)
 library(tokenizers)
 tokenize_text <- function(text){
-  line_tokens = tokenize_words(text)
+  tokens = tokenize_words(text)
 }
 
 #Profanity filtering - removing profanity and other words you do not want to predict.
@@ -44,24 +44,25 @@ profanity_filter <- function(tokenized_text, word_list) {
   
 }
 
-# create sample files
-en_US.blogs.sample <- sample_text_file("final/en_US/en_US.blogs.txt",NA,0.33)
-en_US.news.sample <- sample_text_file("final/en_US/en_US.news.txt",NA,0.33)
-en_US.twitter.sample <- sample_text_file("final/en_US/en_US.twitter.txt",NA,0.33)
-
-#save files to be able recreate the samples without reading the full texts again
-fileConn<-file("sample/en_US/en_US.blogs.txt")
-writeLines(en_US.blogs.sample, fileConn)
-close(fileConn)
-
-fileConn<-file("sample/en_US/en_US.news.txt")
-writeLines(en_US.news.sample, fileConn)
-close(fileConn)
-
-fileConn<-file("sample/en_US/en_US.twitter.txt")
-writeLines(en_US.twitter.sample, fileConn)
-close(fileConn)
-
+# create samples for en_US files
+create_en_US_samples <- function(){
+  en_US.blogs.sample <- sample_text_file("final/en_US/en_US.blogs.txt",NA,0.33)
+  en_US.news.sample <- sample_text_file("final/en_US/en_US.news.txt",NA,0.33)
+  en_US.twitter.sample <- sample_text_file("final/en_US/en_US.twitter.txt",NA,0.33)
+  
+  #save files to be able recreate the samples without reading the full texts again
+  fileConn<-file("sample/en_US/en_US.blogs.txt")
+  writeLines(en_US.blogs.sample, fileConn)
+  close(fileConn)
+  
+  fileConn<-file("sample/en_US/en_US.news.txt")
+  writeLines(en_US.news.sample, fileConn)
+  close(fileConn)
+  
+  fileConn<-file("sample/en_US/en_US.twitter.txt")
+  writeLines(en_US.twitter.sample, fileConn)
+  close(fileConn)
+}
 #counts <- table(all_tokens)
 #word_frequency <- as.data.frame(counts)
 #names(word_frequency) <- c("word","count")
