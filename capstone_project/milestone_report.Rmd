@@ -27,13 +27,20 @@ The function to sample the text takes as input the file name, the number of line
 TODO - profanity filter.
 
 ```{r sampling_functions}
-# TODO
+library(tm)
+library(tokenizers)
+
+en_US.blogs.sample <- readLines("sample/en_US/en_US.blogs.txt")
+en_US.news.sample <- readLines("sample/en_US/en_US.news.txt")
+en_US.twitter.sample <- readLines("sample/en_US/en_US.twitter.txt")
 ```
 
 For demonstration purposes, only the English texts will be used as source to the sampling function, reading all the lines with the probability of reading a line of 33%, which means approximadetaly one third of the file will be in the resulting sample file.
 
 ```{r sampling}
-# TODO
+tokens.blogs <- unlist(tokenize_words(en_US.blogs.sample))
+tokens.blogs.df <- data.frame(table(tokens.blogs))
+head(tokens.blogs.df[order(-tokens.blogs.df$Freq),])
 ```
 
 # Exploratory Data Analysis
