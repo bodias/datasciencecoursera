@@ -1,11 +1,13 @@
 #setwd("/home/braian/coursera/datasciencecoursera_github/capstone_project")
+library(tm)
+library(tokenizers)
 
 sample_text_file <- function(file_name,n_lines=NA,p = 1){
   sample_file = character()
   sample_i = 1
   con <- file(file_name, "r") 
   
-  ## Read the first line of text readLines(con, 1) 
+  ## Read the lines until it reaches the end of the file or the number of lines n_lines 
   i = 1
   repeat {
     line <- readLines(con, 1)
@@ -13,6 +15,7 @@ sample_text_file <- function(file_name,n_lines=NA,p = 1){
     if (length(line) == 0){
       break
     } else {
+      # number of lines reached
       if (!is.na(n_lines)){
         if (i > n_lines){
           break
@@ -31,10 +34,6 @@ sample_text_file <- function(file_name,n_lines=NA,p = 1){
   sample_file
 }
 
-# Tokenization - identifying appropriate tokens such as words, punctuation, and numbers. 
-#  Writing a function that takes a file as input and returns a tokenized version of it.
-library(tm)
-library(tokenizers)
 
 #Profanity filtering - removing profanity and other words you do not want to predict.
 profanity_filter <- function(tokenized_text, word_list) {
