@@ -23,7 +23,7 @@ In the next sections of the document it will be presented the basic structure of
 
 The [full dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip) is a compressed file of approximatedly 574MB, containing raw text from newspappers, blogs and Twitter in four different languages: English, German, Russian and Finnish. For instance, The size of the English file with newspapper texts is 205MB uncompressed. Therefore, to be able to run this report in a small fraction of time, a sample of the data will be used.
 
-The R function to create a sample takes as input the file name, the number of lines that would be read, and the probability of reading a line (where 1 means all lines would be read, 0.5 means only 50% of the the lines will be read, and so on). The function itself will not be shown here for the sake of simplicity, but it can be seen in the file "functions.R", function "sample_text_file".
+The R function to create a sample takes as input the file name, the number of lines that would be read, and the probability of reading a line (where 1 means all lines would be read, 0.5 means only 50% of the the lines will be read, and so on). The function itself will not be shown here for the sake of simplicity, but it can be seen in the file "functions.R", function "sample_text_file" on my [github](https://github.com/bodias/datasciencecoursera/blob/master/capstone_project/functions.R) .
 
 For demonstration purposes, a ten percent sample of the English texts will be used in this report.
 
