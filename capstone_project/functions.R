@@ -42,10 +42,10 @@ profanity_filter <- function(tokenized_text, word_list) {
 }
 
 # create samples for en_US files
-create_en_US_samples <- function(){
-  en_US.blogs.sample <- sample_text_file("final/en_US/en_US.blogs.txt",NA,0.33)
-  en_US.news.sample <- sample_text_file("final/en_US/en_US.news.txt",NA,0.33)
-  en_US.twitter.sample <- sample_text_file("final/en_US/en_US.twitter.txt",NA,0.33)
+create_en_US_samples <- function(prob){
+  en_US.blogs.sample <- sample_text_file("final/en_US/en_US.blogs.txt",NA,prob)
+  en_US.news.sample <- sample_text_file("final/en_US/en_US.news.txt",NA,prob)
+  en_US.twitter.sample <- sample_text_file("final/en_US/en_US.twitter.txt",NA,prob)
   
   #save files to be able recreate the samples without reading the full texts again
   fileConn<-file("sample/en_US/en_US.blogs.txt")

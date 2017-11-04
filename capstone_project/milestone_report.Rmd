@@ -15,17 +15,17 @@ The main purpose of this report is to present an approach to the problem of pred
 
 To do so, a large corpus of text documents have been used, containing text from newspappers, blogs and Twitter in four different languages: English, German, Russian and Finnish.
 
-The model chosen to accomplish the task was the "n-gram" **URL** model, which according to Wikipedia, is a type of probabilistic languague model for predicting the next item in such a sequence in the form of a (n-1)-order Markov Model.
+The model chosen to accomplish the task was the ["n-gram"](https://en.wikipedia.org/wiki/N-gram) model, which is a type of probabilistic languague model for predicting the next item in such a sequence in the form of a (n-1)-order Markov Model.
 
 In the next sections of the document it will be presented the basic structure of the raw data, how it could be transformed to be suitable for use in a predictive text model and the future plans to address the text prediction problem.
 
 # Loading data
 
-The [full dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip) is a compressed file of approximatedly 574MB, containing raw text from newspappers, blogs and Twitter in four different languages: English, German, Russian and Finnish. The English file with newspapper texts, for instance, is 205mb uncompressed. Therefore, to be able to run this report in a small fraction of time, a sample of the data will be used.
-The R function to create a sample takes as input the file name, the number of lines that would be read, and the probability of reading a line (where 1 means all lines would be read, 0.5 means only 50% of the the lines will be read, and so on). The function itself will not be shown here for the sake of simplicity, but it can be seen in the file "functions.R", function "sample_text_file".
-For demonstration purposes, an one third sample of the English texts will be used in this report.
+The [full dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip) is a compressed file of approximatedly 574MB, containing raw text from newspappers, blogs and Twitter in four different languages: English, German, Russian and Finnish. For instance, The size of the English file with newspapper texts is 205MB uncompressed. Therefore, to be able to run this report in a small fraction of time, a sample of the data will be used.
 
-TODO - profanity filter.
+The R function to create a sample takes as input the file name, the number of lines that would be read, and the probability of reading a line (where 1 means all lines would be read, 0.5 means only 50% of the the lines will be read, and so on). The function itself will not be shown here for the sake of simplicity, but it can be seen in the file "functions.R", function "sample_text_file".
+
+For demonstration purposes, a ten percent sample of the English texts will be used in this report.
 
 ```{r loading_data, echo=TRUE, warning=FALSE, message=FALSE}
 #load basic libraries for text handling
@@ -38,14 +38,12 @@ en_US.news.sample <- readLines("sample/en_US/en_US.news.txt")
 en_US.twitter.sample <- readLines("sample/en_US/en_US.twitter.txt")
 
 all_texts <- c(en_US.blogs.sample,en_US.news.sample,en_US.twitter.sample)
-
-#doc <- Corpus(VectorSource(all_texts))
 ```
 
 
 After reading the data, some transformations and cleaning processes were applied :
 
-* Map "/","@" and "|" to white space
+* Map "/","@","_" and "|" to white space
 * Make all words lowercase
 * Remove numbers
 * Remove extra white spaces
@@ -60,9 +58,7 @@ all_texts <- gsub("(\\s+[0-9]+\\s+)", " ", all_texts)
 all_texts <- gsub("\\s+", " ", all_texts)
 ```
 
-
-The next step would be tokenize the tidy raw texts into words, to extract features from data, such as frequency and n-grams.
-
+The next step will be tokenize the tidy raw texts into words, to extract features from data, such as frequency and n-grams.
 
 ```{r sampling,  echo=TRUE, warning=FALSE, message=FALSE}
 tokens <- unlist(tokenize_words(all_texts))
@@ -74,9 +70,9 @@ tokens.sorted <- tokens.df[order(-tokens.df$frequency),]
 
 # Exploratory Data Analysis
 
-After loading and transforming the raw data, some simple statistics of the data are presented below to give a better understand of the data.
+After loading and transforming the raw text, some simple statistics are presented below to give a better understand of the data.
 
-## Summary statistics
+### Summary statistics
 
 ```{r data_transformation}
 summary(tokens.sorted)
@@ -88,49 +84,99 @@ tail(tokens.sorted,10)
 barplot(tokens.sorted[1:10,]$frequency, las = 2, names.arg = tokens.sorted[1:10,]$word,
         col ="lightblue", main ="Most frequent words",
         ylab = "Word frequencies")
-
-
-least_frequent_words <- tokens.sorted[tokens.sorted$frequency <= 50,"word"]
-all_texts_freq <- all_texts
-i <- 1
-step <- 50
-while (i <= length(least_frequent_words)){
-  all_texts_freq <- removeWords(all_texts_freq,least_frequent_words[i:(i+step)])
-  i <- i+step+1
-}
-
 ```
 
 We can see that, based on the output of the **summary** function :
 
-* There are a lot of characters that doesn't carry any information, such as ἄ,ʚ,で, and also foreign characters. However, they appear with a low frequency.
-* Most of the high frequent words are above the 3rd quantile, which leads to a conclusion that the most frequent words represents a small percentage of the data (less than 25%)
+* There are a lot of characters that doesn't carry any information and also foreign characters. However, they appear with a low frequency.
+* Most of the frequent words are above the 3rd quantile, which leads to a conclusion that the most frequent words represents a small percentage of the data (less than 25%)
 
 Looking at the data presented by the function **head** and the **barplot** above is possible to see the ten most frequent words. The **tail** function displays the 10-least frequent words.
 
-Below it's a usefull representation of the words, called wordcloud. It displays the 100-most frequent words.
+Below it's a usefull visual representation of the words, called wordcloud. It displays the 50-most frequent words.
 
 ```{r wordcloud}
 library(wordcloud)
 
 set.seed(1234)
 wordcloud(words = tokens.sorted$word, freq = tokens.sorted$frequency, min.freq = 10000,
-           max.words=100, random.order=FALSE, rot.per=0.35, 
+           max.words=50, random.order=FALSE, rot.per=0.35, 
            colors=brewer.pal(8, "Dark2"))
 ```
 
-## Findings
+After investigate the most and least frequent words, it's possible to see there are improvements to be made to make the dataset smaller but more robust. To do so, the least frequent words will be removed from the original text, before generating the 2-grams and 3-grams.
 
-Data is indeed very noise, containing strange characters and even foreign characters. Also, most of the words appear with a very low frequency. That can be seen by the distribution of the frequencies, which says that at least 75% of the words appear with a frequency lower than 4.  
+```{r least_frequent,cache=TRUE,warning=FALSE, message=FALSE}
+least_frequent_words <- tokens.sorted[tokens.sorted$frequency <= 20,"word"]
+all_texts_freq <- all_texts
+i <- 1
+i_next <- 1
+step <- 1000
+# I had to iterate over a chunk of words, once "removeWords" concatenates all the words and it was
+# causing an error.
+while (i <= length(least_frequent_words)){
+  if((i+step) > length(least_frequent_words)){
+    i_next <- length(least_frequent_words)
+  } else {
+    i_next <- (i+step)
+  }
+  all_texts_freq <- removeWords(all_texts_freq,least_frequent_words[i:i_next])
+  i <- i_next + 1
+  #print(paste("step : ",i))
+}
+#remove spaces introduced by removeWords()
+all_texts_freq <- gsub("\\s+", " ", all_texts_freq)
+
+# creating the 2-grams now with the cleaned text
+n2grams <- unlist(tokenize_ngrams(all_texts_freq, n=2))
+n2grams.df <- data.frame(table(n2grams))
+names(n2grams.df) <- c('ngram','frequency')
+#make a copy of the dataset ordered by frequency to easily extract the most frequent words later 
+n2grams.sorted <- n2grams.df[order(-n2grams.df$frequency),]
+
+# creating the 3-grams
+n3grams <- unlist(tokenize_ngrams(all_texts_freq, n=3))
+n3grams.df <- data.frame(table(n3grams))
+names(n3grams.df) <- c('ngram','frequency')
+#make a copy of the dataset ordered by frequency to easily extract the most frequent words later 
+n3grams.sorted <- n3grams.df[order(-n3grams.df$frequency),]
+```
+
+Below are the summary statistics of the n-grams 
+
+**2-gram**
+```{r 2gram}
+summary(n2grams.sorted)
+head(n2grams.sorted,5)
+
+```
+
+**3-gram**
+```{r 3gram}
+summary(n3grams.sorted)
+head(n3grams.sorted,5)
+```
+
+### Findings
+
+Data is indeed very noise, containing strange characters and even foreign characters. Also, most of the words appear with a very low frequency. That can be seen by the distribution of the frequencies, which says that at least 75% of the words appear with a frequency lower than 4.
+
+There are some drawbacks in using samples instead of the whole files, the vocabulary is smaller and some very specific words may disapear because they become rare in the dataset. Using the whole files would make the vocabulary richer, but it would consume too much memory. This trade-off should be taken into consideration when generating the final model. 
+
+Also, it is possible to see that some misspelled words are naturally removed from the texts when performing the filter by the least frequent words.
 
 # Next steps
-By having the number of occurences of each 3-gram throughout the English news texts, it's possible to determine the probability of each 3-gram to occur. With this probability, it's possible to predict the next most likely word to occur in a sentence.
+By having the number of occurences of each 2-gram and 3-gram throughout the English texts, it's possible to determine the most likely word to appear given a set of words. For example, according to the data, the three most likely words to appear after the words **"love my"** are : **friends**, **family** and **life**: 
+
+```{r predictions}
+head(n3grams.sorted[grep("^love my",n3grams.sorted$ngram),],3)
+```
+
+With these frequencies, it's possible to predict the next most likely word to occur in a sentence.
 
 Having said that, the next steps would be :
-1. Follow the 3-gram approach and create an algorithm to predict the next word.
-2. Use the algorithm to create a Shiny app that could be used for everyone to predict the next word given a text.
 
-
-
-some preprocessing is needed in order to store the text in suitable format to better understand the distribution and relationship between words in the text. 
-Text will then be stored in a way to fit a 3-gram model, so it will be a three words pair.
+ 1. Improve the algoritm to remove foreign characters;
+ 2. Determine which size of the n-gram model would have the best accuracy;
+ 3. Apply the same approach to German, Russian and Finnish texts.
+ 4. Use the algorithm to create a Shiny app that could be used for everyone to predict the next word given a text.
